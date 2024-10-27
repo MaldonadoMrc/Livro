@@ -39,6 +39,8 @@ def exibir_livros():
     return livros
 
 
+
+
 # Função para exibir os usuários
 def exibir_usuarios():
     conn = connect()
@@ -70,22 +72,21 @@ def insert_loan(id_livro, id_usuario, data_emprestimo, data_devolucao):
 # Função para exibir todos os livros emprestados no momento
 def get_books_on_loan():
     conn = connect()
-    result = conn.execute("""
-        SELECT livros.titulo, usuarios.nome,emprestimos.data_emprestimo,emprestimos.data_devolucao
-        FROM livros
-        INNER JOIN emprestimos ON livros.id = emprestimos.id_livro
-        INNER JOIN usuarios ON usuarios.id = emprestimos.id_usuario
-        WHERE emprestimos.data_devolucao IS NULL
-    """).fetchall()
+    result = conn.execute("SELECT emprestimos.id, livros.titulo, usuarios.nome, usuarios.sobrenome, emprestimos.data_emprestimo, emprestimos.data_devolucao \
+                           FROM livros \
+                           INNER JOIN emprestimos ON livros.id = emprestimos.id_livro \
+                           INNER JOIN usuarios ON usuarios.id = emprestimos.id_usuario \
+                           WHERE emprestimos.data_devolucao IS NULL").fetchall()
     conn.close()
     return result
 
 # Função para atualizar a data de devolução de empréstimo
-def update_loan_return_date(data_devolucao, id_emprestimo):
+def update_loan_return_date(id_emprestimo, data_devolucao):
     conn = connect()
     conn.execute("UPDATE emprestimos SET data_devolucao = ? WHERE id = ?", (data_devolucao, id_emprestimo))
     conn.commit()
     conn.close()
+
 
 # Função para excluir um empréstimo e o livro associado
 def delete_book_on_loan(id_livro):
@@ -98,6 +99,7 @@ def delete_book_on_loan(id_livro):
         print(f"O livro com ID {id_livro} não está emprestado ou não existe.")
         conn.close()
         return
+   
 
     # Excluir o empréstimo associado ao livro
     conn.execute("DELETE FROM emprestimos WHERE id_livro = ? AND data_devolucao IS NULL", (id_livro,))
@@ -109,3 +111,31 @@ def delete_book_on_loan(id_livro):
     conn.close()
     
     print(f"O livro com ID {id_livro} foi excluído, junto com o empréstimo associado.")
+
+#Exlcluir usuarios cadastrados
+def delete_user_on_loan(user_id):
+    conn = sqlite3.connect('dados.db')  # Conectar ao banco de dados
+    try:
+        # Verificar se o usuário está emprestado
+        exibir_usuarios = conn.execute("SELECT id FROM usuarios WHERE id = ?", (user_id,)).fetchall()
+        
+        if not exibir_usuarios:
+            print(f"O usuário com ID {user_id} não existe.")
+            return
+        
+        # Excluir o empréstimo associado ao usuário
+        conn.execute("DELETE FROM emprestimos WHERE id_usuario = ?", (user_id,))
+        
+        # Agora excluir o usuário da tabela 'usuarios'
+        conn.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+        
+        conn.commit()
+        print(f"O usuário com ID {user_id} foi excluído, junto com o empréstimo associado.")
+    
+    except Exception as e:
+        print(f"Ocorreu um erro: {e}")
+    
+    finally:
+        conn.close()
+
+
